@@ -34,8 +34,6 @@ def generate_audio(caption, audio_path):
 def health_check():
     return jsonify({"status": "Server is running"}), 200
 
-
-
 # Caption Image Route
 @app.route("/caption", methods=["POST"])
 def caption_image():
@@ -61,3 +59,8 @@ def caption_image():
     except Exception as e:
         print(f"Server Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+# Ensure correct port for deployment (especially for Render)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
