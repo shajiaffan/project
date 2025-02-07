@@ -3,3 +3,4 @@ transformers
 Pillow
 gTTS
 torch
+gunicorn
