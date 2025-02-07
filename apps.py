@@ -32,26 +32,34 @@ def generate_audio(caption, output_path):
     tts.save(output_path)
     return output_path
 
+import os
+
 @app.route("/caption", methods=["POST"])
 def caption_image():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
+    try:
+        if "image" not in request.files:
+            return jsonify({"error": "No image uploaded"}), 400
 
-    image_file = request.files["image"]
-    image = Image.open(image_file).convert("RGB")
+        image_file = request.files["image"]
+        image = Image.open(image_file).convert("RGB")
 
-    # Generate caption
-    caption = generate_caption(image)
+        # Generate caption
+        caption = generate_caption(image)
 
-    # Generate audio
-    audio_path = "output.mp3"
-    generate_audio(caption, audio_path)
+        # Generate audio
+        audio_path = "output.mp3"
+        generate_audio(caption, audio_path)
 
-    # Send caption and audio
-    response = {
-        "caption": caption
-    }
-    return send_file(audio_path, mimetype="audio/mpeg", as_attachment=True, attachment_filename="caption_audio.mp3")
+        # Check if the audio file exists before sending
+        if not os.path.exists(audio_path):
+            return jsonify({"error": "Audio file was not generated"}), 500
+
+        return send_file(audio_path, mimetype="audio/mpeg", as_attachment=True, download_name="caption_audio.mp3")
+
+    except Exception as e:
+        print(f"Server Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
