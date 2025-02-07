@@ -34,6 +34,8 @@ def generate_audio(caption, audio_path):
 def health_check():
     return jsonify({"status": "Server is running"}), 200
 
+
+
 # Caption Image Route
 @app.route("/caption", methods=["POST"])
 def caption_image():
