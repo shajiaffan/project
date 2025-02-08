@@ -41,6 +41,11 @@ def capture_image():
     cap.release()
     return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
+# Root Route
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Welcome to the Image Captioning API!"}), 200
+
 # Health Check Route
 @app.route("/health", methods=["GET"])
 def health_check():
