@@ -79,6 +79,10 @@ def caption_image():
 # Capture Image and Get Description Route
 @app.route("/capture", methods=["GET"])
 def capture_and_describe():
+    # Check if running on Render (cloud environment)
+    if os.environ.get("RENDER"):
+        return jsonify({"error": "Camera capture is not supported on Render."}), 400
+
     try:
         # Capture image from camera
         image = capture_image()
