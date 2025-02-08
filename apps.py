@@ -1,10 +1,11 @@
-# Enable inference mode for better performance
 import torch
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from gtts import gTTS
+import cv2
 import os
+import tempfile
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -29,6 +30,17 @@ def generate_audio(caption, audio_path):
     tts = gTTS(text=caption, lang='en')
     tts.save(audio_path)
 
+# Capture Image from Camera
+def capture_image():
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        raise Exception("Could not open video device")
+    ret, frame = cap.read()
+    if not ret:
+        raise Exception("Could not read frame from video device")
+    cap.release()
+    return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
 # Health Check Route
 @app.route("/health", methods=["GET"])
 def health_check():
@@ -48,8 +60,9 @@ def caption_image():
         caption = generate_caption(image)
 
         # Generate audio
-        audio_path = "output.mp3"
-        generate_audio(caption, audio_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+            audio_path = tmp_file.name
+            generate_audio(caption, audio_path)
 
         if not os.path.exists(audio_path):
             return jsonify({"error": "Audio file was not generated"}), 500
@@ -59,6 +72,36 @@ def caption_image():
     except Exception as e:
         print(f"Server Error: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+
+# Capture Image and Get Description Route
+@app.route("/capture", methods=["GET"])
+def capture_and_describe():
+    try:
+        # Capture image from camera
+        image = capture_image()
+
+        # Generate caption
+        caption = generate_caption(image)
+
+        # Generate audio
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+            audio_path = tmp_file.name
+            generate_audio(caption, audio_path)
+
+        if not os.path.exists(audio_path):
+            return jsonify({"error": "Audio file was not generated"}), 500
+
+        return send_file(audio_path, mimetype="audio/mpeg", as_attachment=True, download_name="caption_audio.mp3")
+
+    except Exception as e:
+        print(f"Server Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 
 # Ensure correct port for deployment (especially for Render)
 if __name__ == "__main__":
