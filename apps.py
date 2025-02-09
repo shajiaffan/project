@@ -1,118 +1,59 @@
-import torch
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from gtts import gTTS
-import cv2
+import io
 import os
-import tempfile
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Load BLIP Model and Processor (Move to CPU)
-device = torch.device("cpu")
+# Load BLIP Model and Processor
 blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-blip_model = BlipForConditionalGeneration.from_pretrained(
-    "Salesforce/blip-image-captioning-base"
-).to(device)
+blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
-# Generate Caption
+# Function to generate caption
 def generate_caption(image):
-    with torch.no_grad():  # Reduce memory usage
-        inputs = blip_processor(image, return_tensors="pt").to(device)
-        out = blip_model.generate(**inputs)
-        caption = blip_processor.decode(out[0], skip_special_tokens=True)
+    inputs = blip_processor(image, return_tensors="pt")
+    outputs = blip_model.generate(**inputs)
+    caption = blip_processor.decode(outputs[0], skip_special_tokens=True)
     return caption
 
-# Generate Audio from Caption
-def generate_audio(caption, audio_path):
-    tts = gTTS(text=caption, lang='en')
-    tts.save(audio_path)
+# Function to generate audio
+def generate_audio(caption):
+    tts = gTTS(caption, lang="en")
+    audio_io = io.BytesIO()
+    tts.write_to_fp(audio_io)
+    audio_io.seek(0)
+    return audio_io
 
-# Capture Image from Camera
-def capture_image():
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        raise Exception("Could not open video device")
-    ret, frame = cap.read()
-    if not ret:
-        raise Exception("Could not read frame from video device")
-    cap.release()
-    return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+# API Endpoint to process the image
+@app.route('/generate_caption', methods=['POST'])
+def process_image():
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
 
-# Root Route
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "Welcome to the Image Captioning API!"}), 200
+    image_file = request.files['image']
+    image = Image.open(image_file.stream).convert("RGB")
 
-# Health Check Route
-@app.route("/health", methods=["GET"])
-def health_check():
-    return jsonify({"status": "Server is running"}), 200
+    # Generate caption
+    caption = generate_caption(image)
 
-# Caption Image Route
-@app.route("/caption", methods=["POST"])
-def caption_image():
-    try:
-        if "image" not in request.files:
-            return jsonify({"error": "No image uploaded"}), 400
+    # Generate audio
+    audio_io = generate_audio(caption)
 
-        image_file = request.files["image"]
-        image = Image.open(image_file).convert("RGB")
+    # Return JSON response with caption and audio file
+    return jsonify({
+        "caption": caption,
+        "audio_url": "/get_audio"
+    }), 200
 
-        # Generate caption
-        caption = generate_caption(image)
+# Endpoint to get the audio
+@app.route('/get_audio', methods=['GET'])
+def get_audio():
+    audio_io = generate_audio("This is a sample audio.")  # Replace with actual audio if needed
+    return send_file(audio_io, mimetype='audio/mp3')
 
-        # Generate audio
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            audio_path = tmp_file.name
-            generate_audio(caption, audio_path)
-
-        if not os.path.exists(audio_path):
-            return jsonify({"error": "Audio file was not generated"}), 500
-
-        return send_file(audio_path, mimetype="audio/mpeg", as_attachment=True, download_name="caption_audio.mp3")
-
-    except Exception as e:
-        print(f"Server Error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-
-# Capture Image and Get Description Route
-@app.route("/capture", methods=["GET"])
-def capture_and_describe():
-    # Check if running on Render (cloud environment)
-    if os.environ.get("RENDER"):
-        return jsonify({"error": "Camera capture is not supported on Render."}), 400
-
-    try:
-        # Capture image from camera
-        image = capture_image()
-
-        # Generate caption
-        caption = generate_caption(image)
-
-        # Generate audio
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            audio_path = tmp_file.name
-            generate_audio(caption, audio_path)
-
-        if not os.path.exists(audio_path):
-            return jsonify({"error": "Audio file was not generated"}), 500
-
-        return send_file(audio_path, mimetype="audio/mpeg", as_attachment=True, download_name="caption_audio.mp3")
-
-    except Exception as e:
-        print(f"Server Error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-
-# Ensure correct port for deployment (especially for Render)
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# Run the Flask app
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
