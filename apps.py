@@ -1,4 +1,7 @@
-from flask import Flask, request, jsonify, send_file
+
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
+
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from gtts import gTTS
