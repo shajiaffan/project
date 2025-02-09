@@ -1,7 +1,5 @@
-Flask
-torch
+fastapi
+uvicorn
 transformers
 gTTS
 Pillow
-opencv-python
-gunicorn
