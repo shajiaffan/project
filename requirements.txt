@@ -1,5 +1,5 @@
 fastapi
 uvicorn
+pillow
 transformers
-gTTS
-Pillow
+gtts
