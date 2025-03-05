@@ -5,3 +5,4 @@ transformers
 gtts
 torch
 torchvision
+python-multipart
