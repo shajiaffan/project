@@ -3,3 +3,5 @@ uvicorn
 pillow
 transformers
 gtts
+torch
+torchvision
