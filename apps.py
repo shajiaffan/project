@@ -23,13 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Load BLIP Model and Processor Safely
-try:
-    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-except Exception as e:
-    print(f"Error loading BLIP model: {str(e)}")
-    blip_processor, blip_model = None, None
+# ✅ Load BLIP Model and Processor
+blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
 
 # ✅ Directory to save audio files
 AUDIO_DIR = "audio"
@@ -42,8 +38,6 @@ logger = logging.getLogger(__name__)
 
 def generate_caption(image):
     """Generate a caption for the given image."""
-    if not blip_processor or not blip_model:
-        raise RuntimeError("BLIP model is not loaded.")
     inputs = blip_processor(image, return_tensors="pt")
     outputs = blip_model.generate(**inputs)
     caption = blip_processor.decode(outputs[0], skip_special_tokens=True)
@@ -85,8 +79,7 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
         audio_path = generate_audio(caption, image_file.filename)
         
         # ✅ Use Public Server URL for Mobile Access
-        base_url = os.getenv("RENDER_EXTERNAL_HOSTNAME", "https://your-public-server.com")
-        audio_url = f"{base_url}/get_audio/{image_file.filename}.mp3"
+        audio_url = f"https://your-public-server.com/get_audio/{image_file.filename}.mp3"
 
         # ✅ Add a background task for deletion
         background_tasks.add_task(delete_audio_file, audio_path)
@@ -107,7 +100,7 @@ async def get_audio(filename: str):
         logger.warning(f"Audio file {filename} not found.")
         return JSONResponse(content={"error": "Audio file not found."}, status_code=404)
 
-# ✅ Ensure the app runs on the correct port
+# ✅ Ensure Correct Port for Render
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 10000))  # Get port from env variable
+    port = int(os.getenv("PORT", 8000))  # Default to 8000 if PORT is not set
     uvicorn.run(app, host="0.0.0.0", port=port)
