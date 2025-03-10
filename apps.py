@@ -14,6 +14,9 @@ import uvicorn
 # ✅ Initialize FastAPI
 app = FastAPI()
 
+# ✅ Set Base URL for Render
+BASE_URL = "https://your-render-app.onrender.com"  # Change this to your Render URL
+
 # ✅ Add CORS Middleware (Allow Public Access)
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +38,12 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 logging.basicConfig(level=logging.INFO, filename="app.log", filemode="a",
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+# ✅ Fix: Add a Root Route to Prevent 404 Error
+@app.get("/")
+async def home():
+    """Root endpoint to check if API is live"""
+    return {"message": "Image Captioning API is running!"}
 
 def generate_caption(image):
     """Generate a caption for the given image."""
@@ -78,8 +87,8 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
         caption = generate_caption(image)
         audio_path = generate_audio(caption, image_file.filename)
         
-        # ✅ Use Public Server URL for Mobile Access
-        audio_url = f"https://your-public-server.com/get_audio/{image_file.filename}.mp3"
+        # ✅ Fix: Use Render URL for Audio Access
+        audio_url = f"{BASE_URL}/get_audio/{image_file.filename}.mp3"
 
         # ✅ Add a background task for deletion
         background_tasks.add_task(delete_audio_file, audio_path)
