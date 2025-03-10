@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 pillow
-transformers
-gtts
 torch
 torchvision
-python-multipart
+transformers
+gtts
+python-multipart  
