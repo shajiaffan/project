@@ -1,0 +1,16 @@
+# Ignore Python virtual environments
+venv/
+backend_api/venv/
+
+# Ignore large files
+backend_api/venv/Lib/site-packages/torch/lib/torch_cpu.dll
+backend_api/venv/Lib/site-packages/torch/lib/dnnl.lib
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore system files
+.DS_Store
+Thumbs.db
