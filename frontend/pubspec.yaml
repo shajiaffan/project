@@ -1,0 +1,22 @@
+name: frontend
+description: A Flutter app for image captioning with audio output.
+publish_to: "none"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.0.4
+  permission_handler: ^11.0.1
+  http: ^1.1.0
+  audioplayers: ^6.2.0
+  flutter_tts: ^4.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

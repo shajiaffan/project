@@ -1,0 +1,11 @@
+2025-03-03 13:25:09,132 - fastapi - ERROR - Form data requires "python-multipart" to be installed. 
+You can install "python-multipart" with: 
+
+pip install python-multipart
+
+2025-03-06 00:28:20,563 - main - WARNING - Task cancelled: Deleting audio\01cd7057-f0a4-4665-9c5a-a6c61fffd7db792509600375069521.jpg.mp3
+2025-03-06 00:28:20,567 - main - WARNING - Task cancelled: Deleting audio\47e95128-ed20-442d-bfba-3d2e747a5d643225218144917068893.jpg.mp3
+2025-03-06 00:28:20,567 - main - WARNING - Task cancelled: Deleting audio\94f13c3b-23ba-4491-8df1-0f12725427775336899197030324551.jpg.mp3
+2025-03-06 01:34:18,134 - main - WARNING - Task cancelled: Deleting audio\IMG_7724.JPG.mp3
+2025-03-06 01:34:18,140 - main - WARNING - Task cancelled: Deleting audio\06cd5136-5648-4551-8463-3e3d06514afa4875967725300099723.jpg.mp3
+2025-03-06 01:34:18,143 - main - WARNING - Task cancelled: Deleting audio\950b67b7-e28a-4990-8c1c-7a48aafba44e5389882061962743338.jpg.mp3
