@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,11 +6,13 @@ from PIL import Image, UnidentifiedImageError
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from gtts import gTTS
 import io
-import os
 import time
 import asyncio
 import logging
 import uvicorn
+
+# ✅ Set Hugging Face cache directory to avoid space issues
+os.environ["HF_HOME"] = "/home/ubuntu/hf_cache"
 
 # ✅ Initialize FastAPI
 app = FastAPI()
@@ -100,7 +103,7 @@ async def get_audio(filename: str):
         logger.warning(f"Audio file {filename} not found.")
         return JSONResponse(content={"error": "Audio file not found."}, status_code=404)
 
-# ✅ Ensure Correct Port for Render
+# ✅ Ensure Correct Port for Deployment
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))  # Default to 8000 if PORT is not set
     uvicorn.run(app, host="0.0.0.0", port=port)
