@@ -67,7 +67,9 @@ def generate_audio(caption, filename):
     try:
         print(f"🔄 Generating audio for: {filename}")
         tts = gTTS(caption, lang="en")
-        audio_path = os.path.join(AUDIO_DIR, f"{filename}.mp3")
+        # Convert filename to lowercase
+        filename_lower = filename.lower()
+        audio_path = os.path.join(AUDIO_DIR, f"{filename_lower}.mp3")
         tts.save(audio_path)
 
         # ✅ Verify File Save
@@ -75,6 +77,7 @@ def generate_audio(caption, filename):
             print(f"✅ Audio file saved: {audio_path}")
             return audio_path
         else:
+            print(f"❌ Audio file not saved: {audio_path}")
             raise HTTPException(status_code=500, detail="Audio file was not saved.")
 
     except Exception as e:
@@ -119,7 +122,7 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
 
         # ✅ Dynamic public audio URL
         server_url = os.getenv("PUBLIC_SERVER_URL", "http://13.48.29.42:8000")
-        audio_url = f"{server_url}/get_audio/{image_file.filename}.mp3"
+        audio_url = f"{server_url}/get_audio/{image_file.filename.lower()}.mp3"
 
         # ✅ Schedule audio file deletion
         background_tasks.add_task(delete_audio_file, audio_path)
@@ -133,12 +136,14 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
 @app.get("/get_audio/{filename}")
 async def get_audio(filename: str):
     """Serve the generated audio file."""
-    audio_path = os.path.join(AUDIO_DIR, filename)
+    # Convert filename to lowercase
+    filename_lower = filename.lower()
+    audio_path = os.path.join(AUDIO_DIR, filename_lower)
     if os.path.exists(audio_path):
         print(f"🎵 Serving audio file: {audio_path}")
         return StreamingResponse(open(audio_path, "rb"), media_type="audio/mp3")
     else:
-        logger.warning(f"⚠️ Audio file not found: {filename}")
+        logger.warning(f"⚠️ Audio file not found: {filename_lower}")
         return JSONResponse(content={"error": "Audio file not found."}, status_code=404)
 
 # ✅ Ensure Correct Port for Deployment
