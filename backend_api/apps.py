@@ -12,13 +12,13 @@ from gtts import gTTS
 import torch
 from concurrent.futures import ThreadPoolExecutor
 
-# ✅ Set Hugging Face cache directory
+# ✅ Hugging Face cache directory (optional for speed/reuse)
 os.environ["HF_HOME"] = "/home/ubuntu/hf_cache"
 
-# ✅ Initialize FastAPI app
+# ✅ FastAPI app setup
 app = FastAPI()
 
-# ✅ Allow CORS
+# ✅ CORS setup (allow all origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,12 +27,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Load Optimized Model and Processor
+# ✅ Load BLIP model (public + faster version)
 try:
-    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-small")
+    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     blip_model = BlipForConditionalGeneration.from_pretrained(
-        "Salesforce/blip-image-captioning-small",
-        torch_dtype=torch.float16,
+        "Salesforce/blip-image-captioning-base",
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
         low_cpu_mem_usage=True
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -40,38 +40,38 @@ try:
 except Exception as e:
     raise RuntimeError(f"Error loading BLIP model: {e}")
 
-# ✅ Define Directories
+# ✅ Audio directory
 AUDIO_DIR = "audio"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-# ✅ Logging Setup
+# ✅ Logging
 logging.basicConfig(level=logging.INFO, filename="app.log", filemode="a",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# ✅ Thread Pool for Faster Audio Generation
+# ✅ Background thread for audio generation
 executor = ThreadPoolExecutor(max_workers=2)
 
-# ✅ Image Preprocessing
+# ✅ Resize image
 MAX_IMAGE_SIZE = (512, 512)
 def preprocess_image(image):
     image.thumbnail(MAX_IMAGE_SIZE)
     return image
 
-# ✅ Caption Generation
+# ✅ Generate caption
 def generate_caption(image):
     try:
         image = preprocess_image(image)
         inputs = blip_processor(image, return_tensors="pt").to(device)
         with torch.no_grad():
-            outputs = blip_model.generate(**inputs, max_new_tokens=30, min_new_tokens=5)
+            outputs = blip_model.generate(**inputs, max_length=15, do_sample=True, top_k=50)
         caption = blip_processor.decode(outputs[0], skip_special_tokens=True)
         return caption
     except Exception as e:
         logger.error(f"Caption generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate caption.")
 
-# ✅ Audio Generation
+# ✅ Generate audio
 def generate_audio(caption, filename):
     try:
         tts = gTTS(caption, lang="en")
@@ -82,12 +82,14 @@ def generate_audio(caption, filename):
         logger.error(f"Audio generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate audio.")
 
+# ✅ Delete audio after 24 hours
 async def delete_audio_file(audio_path: str):
-    await asyncio.sleep(24 * 60 * 60)  # Delete after 24 hours
+    await asyncio.sleep(24 * 60 * 60)
     if os.path.exists(audio_path):
         os.remove(audio_path)
         logger.info(f"Deleted audio file: {audio_path}")
 
+# ✅ POST endpoint
 @app.post("/generate_caption")
 async def process_image(image_file: UploadFile = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
@@ -116,6 +118,7 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
         logger.error(f"Error generating caption/audio: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+# ✅ GET endpoint for audio
 @app.get("/get_audio/{filename}")
 async def get_audio(filename: str):
     audio_path = os.path.join(AUDIO_DIR, filename)
@@ -125,5 +128,6 @@ async def get_audio(filename: str):
         logger.warning(f"Audio file {filename} not found.")
         return JSONResponse(content={"error": "Audio file not found."}, status_code=404)
 
+# ✅ Run with Uvicorn
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
