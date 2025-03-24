@@ -9,3 +9,4 @@ pip install python-multipart
 2025-03-06 01:34:18,134 - main - WARNING - Task cancelled: Deleting audio\IMG_7724.JPG.mp3
 2025-03-06 01:34:18,140 - main - WARNING - Task cancelled: Deleting audio\06cd5136-5648-4551-8463-3e3d06514afa4875967725300099723.jpg.mp3
 2025-03-06 01:34:18,143 - main - WARNING - Task cancelled: Deleting audio\950b67b7-e28a-4990-8c1c-7a48aafba44e5389882061962743338.jpg.mp3
+2025-03-17 16:43:00,679 - apps - WARNING - Task cancelled: Deleting audio\IMG_7721.JPG.mp3

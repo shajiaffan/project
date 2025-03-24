@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'api_service.dart'; // Import the API service
+import 'api_service.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
@@ -15,6 +15,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   File? _imageFile;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -30,29 +31,28 @@ class _CameraScreenState extends State<CameraScreen> {
     ].request();
 
     if (statuses[Permission.camera] == PermissionStatus.granted) {
-      captureImage(); // Open camera directly once permission is granted
+      captureImage(); // Automatically open camera
     } else {
       debugPrint("🚨 Camera permission denied!");
     }
   }
 
-  // ✅ Capture Image Immediately When Screen Loads
+  // ✅ Capture Image
   Future<void> captureImage() async {
     try {
       final ImagePicker picker = ImagePicker();
       XFile? pickedFile = await picker.pickImage(source: ImageSource.camera);
 
       if (pickedFile != null) {
-        debugPrint("✅ Image captured at: ${pickedFile.path}");
+        debugPrint("✅ Image captured: ${pickedFile.path}");
 
         setState(() {
           _imageFile = File(pickedFile.path);
         });
 
-        // Upload Image & Get Audio
-        await uploadAndPlayAudio();
+        await uploadAndPlayAudio(); // Upload image & play audio
       } else {
-        debugPrint("🚨 No image was captured.");
+        debugPrint("🚨 No image captured.");
       }
     } catch (e) {
       debugPrint("❌ Error capturing image: $e");
@@ -69,7 +69,7 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       debugPrint("📤 Uploading image: ${_imageFile!.path}");
 
-      String audioUrl = await ApiService.uploadImage(imageFile: _imageFile!);
+      String audioUrl = await _apiService.uploadImage(_imageFile!.path);
       if (audioUrl.isNotEmpty) {
         debugPrint("🔊 Playing audio from: $audioUrl");
         await _audioPlayer.play(UrlSource(audioUrl));
@@ -84,7 +84,7 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Camera Capture")),
+      appBar: AppBar(title: const Text("Capture Image")),
       body: Center(
         child: _imageFile != null
             ? Image.file(_imageFile!)

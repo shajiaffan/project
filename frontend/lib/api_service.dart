@@ -1,37 +1,33 @@
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 
 class ApiService {
-  static Future<String> uploadImage({File? imageFile, Uint8List? webImageBytes}) async {
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse('http://192.168.1.13:8000/generate_caption'), // Ensure correct API URL
-    );
+  final String baseUrl = 'http://13.61.227.55:8000';
 
-    if (kIsWeb && webImageBytes != null) {
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image_file',
-          webImageBytes,
-          filename: 'image.jpg',
-        ),
-      );
-    } else if (imageFile != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('image_file', imageFile.path),
-      );
+  Future<String> uploadImage(String imagePath) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload'));
+      request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        return responseData;
+      } else {
+        throw Exception('Failed to upload image');
+      }
+    } catch (e) {
+      throw Exception('Error uploading image: $e');
     }
+  }
 
-    var response = await request.send();
-    if (response.statusCode == 200) {
-      var responseBody = await response.stream.bytesToString();
-      var jsonData = json.decode(responseBody);
-      return jsonData['audio_url']; // Ensure API returns a valid 'audio_url'
-    } else {
-      return "";
+  Future<void> playAudio(String audioUrl) async {
+    // Assuming your API returns an audio URL
+    try {
+      print("Playing audio from: $audioUrl");
+      // Implement audio player logic using audioplayers or just_audio
+    } catch (e) {
+      print('Error playing audio: $e');
     }
   }
 }
