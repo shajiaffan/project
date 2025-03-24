@@ -1,9 +1,10 @@
-﻿fastapi==0.115.11
+--find-links https://download.pytorch.org/whl/torch_stable.html
+fastapi==0.115.11
 uvicorn==0.34.0
 transformers==4.49.0
-torch
-torchaudio==2.6.0
-torchvision==0.21.0+cpu
+torch==2.1.2+cpu
+torchaudio==2.1.2+cpu
+torchvision==0.16.2+cpu
 gTTS==2.5.4
 numpy==2.2.3
 Pillow==11.1.0
