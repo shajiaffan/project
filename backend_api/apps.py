@@ -4,7 +4,7 @@ import asyncio
 import logging
 import uvicorn
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, UnidentifiedImageError
 from transformers import BlipProcessor, BlipForConditionalGeneration
@@ -12,13 +12,13 @@ from gtts import gTTS
 import torch
 from concurrent.futures import ThreadPoolExecutor
 
-# ✅ Hugging Face cache directory (optional for speed/reuse)
+# ✅ Hugging Face cache directory
 os.environ["HF_HOME"] = "/home/ubuntu/hf_cache"
 
 # ✅ FastAPI app setup
 app = FastAPI()
 
-# ✅ CORS setup (allow all origins)
+# ✅ CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Load BLIP model (public + faster version)
+# ✅ Load BLIP model
 try:
     blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     blip_model = BlipForConditionalGeneration.from_pretrained(
@@ -40,7 +40,7 @@ try:
 except Exception as e:
     raise RuntimeError(f"Error loading BLIP model: {e}")
 
-# ✅ Audio directory
+# ✅ Directories
 AUDIO_DIR = "audio"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -49,29 +49,29 @@ logging.basicConfig(level=logging.INFO, filename="app.log", filemode="a",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# ✅ Background thread for audio generation
+# ✅ Thread pool
 executor = ThreadPoolExecutor(max_workers=2)
 
-# ✅ Resize image
+# ✅ Image preprocessing
 MAX_IMAGE_SIZE = (512, 512)
 def preprocess_image(image):
     image.thumbnail(MAX_IMAGE_SIZE)
     return image
 
-# ✅ Generate caption
+# ✅ Caption generation
 def generate_caption(image):
     try:
         image = preprocess_image(image)
         inputs = blip_processor(image, return_tensors="pt").to(device)
         with torch.no_grad():
-            outputs = blip_model.generate(**inputs, max_length=15, do_sample=True, top_k=50)
+            outputs = blip_model.generate(**inputs, max_length=20, min_length=5)
         caption = blip_processor.decode(outputs[0], skip_special_tokens=True)
         return caption
     except Exception as e:
         logger.error(f"Caption generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate caption.")
 
-# ✅ Generate audio
+# ✅ Audio generation
 def generate_audio(caption, filename):
     try:
         tts = gTTS(caption, lang="en")
@@ -82,14 +82,14 @@ def generate_audio(caption, filename):
         logger.error(f"Audio generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate audio.")
 
-# ✅ Delete audio after 24 hours
+# ✅ Delete old audio
 async def delete_audio_file(audio_path: str):
     await asyncio.sleep(24 * 60 * 60)
     if os.path.exists(audio_path):
         os.remove(audio_path)
         logger.info(f"Deleted audio file: {audio_path}")
 
-# ✅ POST endpoint
+# ✅ Main API
 @app.post("/generate_caption")
 async def process_image(image_file: UploadFile = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     try:
@@ -118,16 +118,20 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
         logger.error(f"Error generating caption/audio: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# ✅ GET endpoint for audio
+# ✅ Audio serving route (updated)
 @app.get("/get_audio/{filename}")
 async def get_audio(filename: str):
     audio_path = os.path.join(AUDIO_DIR, filename)
     if os.path.exists(audio_path):
-        return StreamingResponse(open(audio_path, "rb"), media_type="audio/mp3")
+        return FileResponse(
+            audio_path,
+            media_type="audio/mpeg",  # ✅ Correct MIME type
+            filename=filename
+        )
     else:
         logger.warning(f"Audio file {filename} not found.")
         return JSONResponse(content={"error": "Audio file not found."}, status_code=404)
 
-# ✅ Run with Uvicorn
+# ✅ Launch server
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
