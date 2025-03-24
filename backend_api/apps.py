@@ -94,7 +94,7 @@ async def process_image(image_file: UploadFile = File(...), background_tasks: Ba
         caption = generate_caption(image)
         audio_path = generate_audio(caption, image_file.filename)
 
-        server_url = "http://13.48.29.42:8000"
+        server_url = "http://13.61.227.55:8000"
         audio_url = f"{server_url}/get_audio/{image_file.filename}.mp3"
 
         background_tasks.add_task(delete_audio_file, audio_path)
